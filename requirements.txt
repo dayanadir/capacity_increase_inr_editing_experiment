@@ -1,0 +1,12 @@
+numpy
+torch
+torchvision
+tqdm
+wandb
+matplotlib
+einops
+random-fourier-features-pytorch
+hydra-core
+omegaconf
+opencv-python==4.10.0.84
+torch_geometric

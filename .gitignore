@@ -1,0 +1,27 @@
+# Byte-compiled / cache
+__pycache__/
+*.py[cod]
+*.so
+*.egg-info/
+
+# Virtual envs
+.venv/
+env/
+venv/
+
+# Experiment outputs
+wandb/
+outputs/
+multirun/
+
+# Local data (top-level only — does NOT affect experiments/data/ source dir)
+/data/
+
+# IDE
+.vscode/
+.idea/
+.ipynb_checkpoints
+
+# Logs / OS
+*.log
+.DS_Store

@@ -1,0 +1,135 @@
+wandb:
+  log: true
+  project_name: gradient-networks
+  prefix: inr-editing
+
+data:
+  dir: /cortex/data/c-nets/grad-net/mnist-inr-data-64-points  # /Users/avivnavon/Desktop/datasets/inr_gradient_data
+  image_data_path: /cortex/data/images
+  val_size: 5000
+  batch_size: 32
+  normalize: true
+  style_function: dilate
+  node_pos_embed: &node_pos_embed True
+  edge_pos_embed: &edge_pos_embed False
+  # the below can be extracted per datapoint, but since it is the same for all, we can define it here
+  layer_layout: &layer_layout [ 2, 32, 32, 1 ]
+
+train:
+  epochs: 150
+  model: "gradnet"  # dws, gradnet, graddws
+  seed: 42
+  predict_delta: True
+
+dws_args:
+  input_features: 2
+  hidden_dim: 32
+  n_hidden: 4
+  reduction: "max"
+  output_features: 1
+  set_layer: "sab"
+  dropout_rate: 0.1
+  bn: True
+  diagonal: False
+
+gradnet:
+  _target_: nn.gradnet.EquivAttentionGradNet
+  input_neuron_feature_dim: 2
+  hidden_neuron_feature_dim: 64
+  output_weight_feature_dim: 1
+  output_bias_feature_dim: 1
+  transformer_depth: 3
+  transformer_num_heads: 8
+  dim_head: 64
+  attn_dropout: 0.
+  ff_dropout: 0.
+  activation_skip: True
+  num_prob_features: null
+
+scalegmn_args:
+  d_in_v: &d_in_v 1  # initial dimension of input nn bias
+  d_in_e: &d_in_e 1  # initial dimension of input nn weights
+  equiv_out_features: 1  # feature dim of equivariant output tensors
+  d_hid: &d_hid 128  # hidden dimension
+  num_layers: 10 # number of gnn layers to apply
+  direction: bidirectional
+  equivariant: True
+  symmetry: permutation  # symmetry
+  jit: False # prefer compile - compile gnn to optimize performance
+  compile: False # compile gnn to optimize performance
+
+  out_scale: 1e-2
+  gnn_skip_connections: True
+
+  concat_mlp_directions: False  # only for bidirectional: apply an MLP before concatenating the forward and backward directions
+  reciprocal: True
+
+  node_pos_embed: *node_pos_embed  # use positional encodings
+  edge_pos_embed: *edge_pos_embed  # use positional encodings
+
+  layer_layout: *layer_layout
+
+  graph_init:
+    d_in_v: *d_in_v
+    d_in_e: *d_in_e
+    project_node_feats: True
+    project_edge_feats: True
+    d_node: *d_hid
+    d_edge: *d_hid
+
+  positional_encodings:
+    final_linear_pos_embed: False
+    sum_pos_enc: False
+    po_as_different_linear: False
+    equiv_net: False
+    # args for the equiv net option.
+    sum_on_io: True
+    equiv_on_hidden: True
+    num_mlps: 3
+    layer_equiv_on_hidden: False
+
+  gnn_args:
+    d_hid: *d_hid
+    message_fn_layers: 1
+    message_fn_skip_connections: False
+    update_node_feats_fn_layers: 1
+    update_node_feats_fn_skip_connections: False
+    update_edge_attr: True
+    dropout: 0.1
+    dropout_all: False
+    update_as_act: False
+    update_as_act_arg: sum
+    mlp_on_io: True
+
+    msg_equiv_on_hidden: True
+    upd_equiv_on_hidden: True
+    layer_msg_equiv_on_hidden: False
+    layer_upd_equiv_on_hidden: False
+    msg_num_mlps: 2
+    upd_num_mlps: 2
+    pos_embed_msg: False
+    pos_embed_upd: False
+    layer_norm: False
+    aggregator: add
+    sign_symmetrization: False
+
+  mlp_args:
+    d_k: [ *d_hid ]
+    activation: silu
+    dropout: 0.
+    final_activation: identity
+    batch_norm: False
+    layer_norm: True
+    bias: True
+    skip: False
+
+optimizer:
+  _target_: torch.optim.AdamW
+  lr: 0.001
+  weight_decay: 0.001
+
+lr_scheduler:
+  _target_: torch.optim.lr_scheduler.ReduceLROnPlateau
+  factor: 0.5
+  patience: 5
+  min_lr: 1e-4
